@@ -117,7 +117,10 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,
 	ret = nfq_get_payload(nfa, &packet);
 	char *get_str = "GET";
 	char *host_str = "Host";
-	int i,j;
+	FILE* fp = fopen("top-1m.csv","r");
+        int num;
+        char arg[100];
+        int i,j,k;
 	char *tmp;
 	if (ret >= 0) {
 		struct libnet_ipv4_hdr* ip4 = (struct libnet_ipv4_hdr *)(packet);
@@ -145,8 +148,14 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,
 							char *tcp_host = tcp_payload+i+2;
 							if(memcmp(tcp_host, host_str, strlen(host_str)) == 0) {
 								printf("\nStarts with HOST\n");
-								if (memcmp((tcp_payload+i+8), cmp, strlen(cmp)) == 0 ) {
-									return nfq_set_verdict(qh, id, NF_DROP, 0, NULL);
+								while(!feof(fp)) {
+							                fscanf(fp, "%d,%s\n",&num,arg);
+                						//	memcpy(cmp,tcp_host+6,strlen(arg));
+									//memcmp((tcp_payload+i+8), cmp, strlen(cmp));
+							//		printf("%d\n",num);
+									if (memcmp((tcp_payload+i+8),arg,strlen(arg)) == NULL ) {
+										return nfq_set_verdict(qh, id, NF_DROP, 0, NULL);
+									}
 								}
 							}
 						}
@@ -155,6 +164,7 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,
 			}
 		}
 	}
+	fclose(fp);
 	return nfq_set_verdict(qh, id, NF_ACCEPT, 0, NULL);
 }
 
@@ -166,8 +176,8 @@ int main(int argc, char **argv)
 	int fd;
 	int rv;
 	char buf[4096] __attribute__ ((aligned));
-	cmp = argv[1];
-	printf("Target address : %s", cmp);
+	
+//	cmp = argv[1];
 
 	printf("opening library handle\n");
 	h = nfq_open();
