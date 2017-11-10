@@ -1,23 +1,4 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-
-typedef struct r_node // radix_tree node
-{   
-	char *key;
-	int len;
-	r_node *link;
-	r_node *next;
-	r_node(char* x, int n) : len(n), link(0), next(0)
-	{
-		key = new char[n+1];
-		strncpy(key,x,n);
-		key[n] = '\0';
-	}
-	~r_node() { delete[] key; }
-} r_node;
-
-r_node* root = NULL;
+#include "radix.h"
 
 int prefix(char* x, int n, char* key, int m) // length of the biggest common prefix of x and key strings 
 {
@@ -66,7 +47,7 @@ r_node* insert(r_node* t, char* x, int n=0) // inserting x key in t tree
     return t;
 }
 
-int main() {
+int radix() {
 	FILE* fp;
 	char buffer[100];
 	int num = 0;
@@ -86,6 +67,5 @@ int main() {
 	else {
 		printf("There is no target \n");
 	}
-
 	return 0;
 }
