@@ -8,7 +8,7 @@ int prefix(char* x, int n, char* key, int m) // length of the biggest common pre
     return n;
 }
 
-r_node* find(r_node* t, char* x, int n=0) // x key search in t tree 
+r_node* find(r_node* t, char* x, int n) // x key search in t tree 
 {
     if( !n ) n = strlen(x)+1;
     if( !t ) return 0;
@@ -32,7 +32,7 @@ void split(r_node* t, int k) // dividing t node according to k key symbol
     t->len = k;
 }
 
-r_node* insert(r_node* t, char* x, int n=0) // inserting x key in t tree 
+r_node* insert(r_node* t, char* x, int n) // inserting x key in t tree 
 {
     if( !n ) n = strlen(x)+1;
     if( !t ) return new r_node(x,n);
@@ -45,27 +45,4 @@ r_node* insert(r_node* t, char* x, int n=0) // inserting x key in t tree
         t->link = insert(t->link,x+k,n-k);
     }
     return t;
-}
-
-int radix() {
-	FILE* fp;
-	char buffer[100];
-	int num = 0;
-	fp = fopen("top-100.csv","r");
-
-	while(!feof(fp)){
-		if (fp == NULL) return 0;
-//		printf("%d r_node made\n", num);
-		fscanf(fp, "%d,%s\n",&num, buffer);
-		root = insert(root, buffer);
-	}
-	char* target = "google.com.notarget";
-
-	if (find(root, target)) {
-		printf("There is %s\n", target);
-	}
-	else {
-		printf("There is no target \n");
-	}
-	return 0;
 }

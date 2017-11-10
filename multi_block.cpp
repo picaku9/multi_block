@@ -10,6 +10,12 @@
 #include "radix.h"
 r_node* root = NULL;
 
+void init(){
+	system("iptables -F");
+	system("iptables -A OUTPUT -j NFQUEUE --queue-num 0");
+	system("iptables -A INPUT -j NFQUEUE --queue-num 0");
+}
+
 struct ip_addr {
 	u_int8_t s_ip[4];
 };
@@ -44,7 +50,7 @@ int radix() {
 	FILE* fp;
 	char buffer[100];
 	int num = 0;
-	fp = fopen("top-100.csv","r");
+	fp = fopen("top-1m.csv","r");
 
 	while(!feof(fp)){
 		if (fp == NULL) return 0;
@@ -125,50 +131,59 @@ static u_int32_t print_pkt (struct nfq_data *tb)
 static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,
 	      struct nfq_data *nfa, void *data)
 {
-	u_int32_t id = print_pkt(nfa);
+//	u_int32_t id = print_pkt(nfa);
+	int id = 0;
+	struct nfqnl_msg_packet_hdr *ph;
+	ph = nfq_get_msg_packet_hdr(nfa);
+	if (ph) {
+		id = ntohl(ph->packet_id);
+	}
+
 	int ret;
 	unsigned char *packet;
 	ret = nfq_get_payload(nfa, &packet);
 	char *get_str = "GET";
 	char *host_str = "Host";
-	FILE* fp = fopen("top-1m.csv","r");
-        int num;
-        char arg[100];
-        int i,j,k;
-	char *tmp;
+	int num;
+	int i,j,k;
 	if (ret >= 0) {
 		struct libnet_ipv4_hdr* ip4 = (struct libnet_ipv4_hdr *)(packet);
 		uint8_t ip_hd_len = (ip4->ip_hl_v & 0xf) * 4;
-		printf("Is there TCP? \n");
+//		printf("Is there TCP? \n");
 		if(ip4->ip_p == 6) {
 			struct libnet_tcp_hdr* tcp = (struct libnet_tcp_hdr *)(packet + ip_hd_len);
-			printf("Yes there is. ");
+//			printf("Yes there is. ");
 			uint16_t tcp_hd_len = ((tcp->th_x2_off & 0xf0)>>4) * 4;
 			uint16_t tcp_len = ntohs(ip4->ip_len) - ip_hd_len;
 			uint16_t tcp_payload_len = tcp_len - tcp_hd_len ;
 			uint8_t *tcp_payload = (uint8_t *)packet + ip_hd_len + tcp_hd_len;
 
 			if(tcp_payload_len == 0) {
-				printf("There is no tcp_data\n");
+//				printf("There is no tcp_data\n");
 			}
 			else {
-				printf("There is tcp_data : \n");
+//				printf("There is tcp_data : \n");
 //				memcpy(tmp, tcp_payload, len(tcp_payload));
 
 				if(memcmp(tcp_payload, get_str, strlen(get_str)) == 0) {
 					printf("Starts with GET\n");
 					for(i = 0; i < tcp_payload_len; i++) {
 						if(tcp_payload[i] == 13 && tcp_payload[i+1] == 10) {
-							char *tcp_host = tcp_payload+i+2;
-							if(memcmp(tcp_host, host_str, strlen(host_str)) == 0) {
+							if(memcmp(tcp_payload+i+2, host_str, strlen(host_str)) == 0) {
 								printf("\nStarts with HOST\n");
-								char *target = (tcp_payload+i+8);
-								/*
-									if (memcmp((tcp_payload+i+8),arg,strlen(arg)) == NULL ) {
-									return nfq_set_verdict(qh, id, NF_DROP, 0, NULL);
-								*/
+								int host_len = 0;
+								char* target = (char *)(tcp_payload+i+8);
+								while(*target!='\r')
+								{
+									target = target+1;
+									host_len++;
+								}
+								memcpy(target, tcp_payload+i+8, host_len);
+								target[host_len] = '\0';
 
+								printf("%s\n", target);
 								if (find(root, target)) {
+									printf("There is a target \n");
 									return nfq_set_verdict(qh, id, NF_DROP, 0, NULL);
 								}
 								else {
@@ -181,7 +196,6 @@ static int cb(struct nfq_q_handle *qh, struct nfgenmsg *nfmsg,
 			}
 		}
 	}
-	fclose(fp);
 	return nfq_set_verdict(qh, id, NF_ACCEPT, 0, NULL);
 }
 
@@ -193,7 +207,8 @@ int main(int argc, char **argv)
 	int fd;
 	int rv;
 	char buf[4096] __attribute__ ((aligned));
-	
+	init();
+	radix();
 //	cmp = argv[1];
 
 	printf("opening library handle\n");
@@ -232,7 +247,7 @@ int main(int argc, char **argv)
 
 	for (;;) {
 		if ((rv = recv(fd, buf, sizeof(buf), 0)) >= 0) {
-			printf("pkt received\n");
+//			printf("pkt received\n");
 			nfq_handle_packet(h, buf, rv);
 			continue;
 		}
