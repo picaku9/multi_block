@@ -1,11 +1,14 @@
-all : multi_block_loop
+all : multi_block
 
-multi_block_loop: main.o
-	g++ -g -o multi_block_loop main.o -lnetfilter_queue
+multi_block: radix.o main.o
+	g++ -g -o multi_block main.o radix.o -l netfilter_queue
 
-main.o:
-	g++ -g -c -o main.o nfqnl_test.c -lnetfilter_queue
+radix.o: radix.cpp radix.h
+	g++ -c -o radix.o radix.cpp
+
+main.o: multi_block.cpp radix.h
+	g++ -c -o main.o multi_block.cpp -lnetfilter_queue
 
 clean:
-	rm -f multi_block_loop
+	rm -f multi_block
 	rm -f *.o
